@@ -1,0 +1,69 @@
+First of all go to https://github.com/stripe/stripe-php and copy the command composer require stripe/stripe-php
+
+
+then in .env file 
+
+STRIPE_TEST_PK=(copy your publisher key here from stripe account)
+STRIPE_TEST_SK=(copy your secret key here from stripe account)
+
+
+Now in app/config folder make a file stripe.php
+
+and enter the code 
+
+<?php
+return [
+    'stripe_pk' => env('STRIPE_TEST_PK'),
+    'stripe_sk' => env ('STRIPE_TEST_SK'),
+];
+
+Make these routes
+
+Route::post('stripe',[StripeController::class,'stripe'])->name('stripe');
+Route::get('success',[StripeController::class,'success'])->name('success');
+Route::post('cancel',[StripeController::class,'cancel'])->name('cancel');
+
+Make a stripe controller
+
+now goto stripe.com/docs and search for Make line item quantities adjustable
+
+change code to php and copy the code and in stripe controller make a stripe function and paste the copied code.
+
+This is the code
+
+$stripe = new \Stripe\StripeClient(config('stripe.stripe_sk'));
+
+$response=$stripe->checkout->sessions->create([
+  'line_items' => [
+    [
+      'price_data' => [
+        'currency' => 'usd',
+        'product_data' => ['name' => $request->product_name],
+        'unit_amount' => $request->price*100,
+      ],
+      'quantity' => $request->quantity,
+    ],
+  ],
+  'mode' => 'payment',
+  'success_url' => route('success').'?session_id={CHECKOUT_SESSION_ID}',
+  'cancel_url' => route('cancel'),
+]);
+//dd($response);
+if(isset($response->id) && $response->id !=''){
+    session()->put('product_name',$request->product_name);
+    session()->put('quantity',$request->quantity);
+    session()->put('price',$request->price);
+    return redirect($response->url);
+}
+    else{
+        return redirect()->route('cancel');
+    }
+    }
+
+make 2 other functions and their code are
+    public function success(){
+        return "Success";
+    }
+    public function cancel(){
+        return "cancel";
+    }
